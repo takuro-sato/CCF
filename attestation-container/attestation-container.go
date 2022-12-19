@@ -227,7 +227,8 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		fmt.Println("Failed to deserialize attestation report")
 		return nil, fmt.Errorf("failed to deserialize attestation report")
 	}
-	fmt.Printf("Deserialized attestation: %#v\n", SNPReport)
+	// IMPROVE: Use logging.Debug()
+	// fmt.Printf("Deserialized attestation: %#v\n", SNPReport)
 	return &pb.FetchAttestationReply{Attestation: "Attestation report: " + fmt.Sprintf("%#v\n", SNPReport)}, nil
 }
 
@@ -241,17 +242,6 @@ func main() {
 	} else {
 		fmt.Println("Unknown error:", err)
 	}
-
-	reportData := []byte("public key")
-	reportBytes, err := FetchAttestationReportByte(reportData)
-	if err != nil {
-		fmt.Println("Failed to fetch attestation report:", err)
-	}
-	var SNPReport SNPAttestationReport
-	if err := SNPReport.DeserializeReport(reportBytes); err != nil {
-		fmt.Println("Failed to deserialize attestation report")
-	}
-	fmt.Printf("Deserialized attestation: %#v\n", SNPReport)
 
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))

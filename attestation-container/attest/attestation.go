@@ -163,7 +163,7 @@ func createReportReqBytes(reportData [REPORT_DATA_SIZE]byte) [REPORT_REQ_SIZE]by
 	return reportReqBytes
 }
 
-func createPayloadBytes(reportReqBytes [REPORT_REQ_SIZE]byte, responseRespBytes [RESPONSE_RESP_SIZE]byte) ([PAYLOAD_SIZE]byte, error) {
+func createPayloadBytes(reportReqPtr uintptr, responseRespPtr uintptr) ([PAYLOAD_SIZE]byte, error) {
 	payload := [PAYLOAD_SIZE]byte{}
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.LittleEndian, uint8(SNP_MSG_REPORT_REQ)); err != nil {
@@ -186,7 +186,7 @@ func createPayloadBytes(reportReqBytes [REPORT_REQ_SIZE]byte, responseRespBytes 
 	if err := binary.Write(&buf, binary.LittleEndian, uint16(0)); err != nil {
 		return payload, err
 	}
-	if err := binary.Write(&buf, binary.LittleEndian, uint64(uintptr(unsafe.Pointer(&reportReqBytes[0])))); err != nil {
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(reportReqPtr)); err != nil {
 		return payload, err
 	}
 	if err := binary.Write(&buf, binary.LittleEndian, uint16(RESPONSE_RESP_SIZE)); err != nil {
@@ -200,7 +200,7 @@ func createPayloadBytes(reportReqBytes [REPORT_REQ_SIZE]byte, responseRespBytes 
 	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
 		return payload, err
 	}
-	if err := binary.Write(&buf, binary.LittleEndian, uint64(uintptr(unsafe.Pointer(&responseRespBytes[0])))); err != nil {
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(responseRespPtr)); err != nil {
 		return payload, err
 	}
 	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
@@ -226,7 +226,7 @@ func FetchAttestationReportByte(reportData [64]byte) ([]byte, error) {
 
 	reportReqBytes := createReportReqBytes(reportData)
 	responseRespBytes := [RESPONSE_RESP_SIZE]byte{}
-	payload, err := createPayloadBytes(reportReqBytes, responseRespBytes)
+	payload, err := createPayloadBytes(uintptr(unsafe.Pointer(&reportReqBytes[0])), uintptr(unsafe.Pointer(&responseRespBytes[0])))
 	if err != nil {
 		return nil, err
 	}
@@ -247,9 +247,6 @@ func FetchAttestationReportByte(reportData [64]byte) ([]byte, error) {
 		fmt.Printf("fetching attestation report failed. status: %v\n", status)
 		return nil, fmt.Errorf("fetching attestation report failed. status: %v", status)
 	}
-
-	fmt.Printf("responseRespBytes: %+v\n", responseRespBytes)
-	fmt.Printf("reportReqBytes: %+v\n", reportReqBytes)
 
 	return responseRespBytes[32 : 32+SNP_REPORT_SIZE], nil
 }

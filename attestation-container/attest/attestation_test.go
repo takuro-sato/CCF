@@ -22,7 +22,6 @@ func TestFetchAndDeserializeReport(t *testing.T) {
 	if err := SNPReport.DeserializeReport(reportBytes); err != nil {
 		t.Fatalf("Failed to deserialize attestation report: %v", err)
 	}
-	// fmt.Printf("%v\n", hex.EncodeToString(reportBytes))
 	expectedByteString := hex.EncodeToString(reportData[:])
 	assertEqual(t, "Check report data", expectedByteString, SNPReport.ReportData)
 }

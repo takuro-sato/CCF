@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -37,7 +36,7 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		fmt.Println("Failed to fetch attestation report:", err)
 		return nil, fmt.Errorf("failed to fetch attestation report")
 	}
-	log.Printf("Attestation: %v", hex.EncodeToString(reportBytes))
+	// log.Printf("Attestation: %v", hex.EncodeToString(reportBytes))
 	return &pb.FetchAttestationReply{Attestation: reportBytes}, nil
 }
 

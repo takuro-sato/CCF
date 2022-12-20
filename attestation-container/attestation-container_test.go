@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"testing"
 	"time"
 
 	pb "microsoft/attestation-container/protobuf"
@@ -16,7 +17,7 @@ var (
 	addr = flag.String("addr", "localhost:50051", "the address to connect to")
 )
 
-func main() {
+func TestFetchReport(t *testing.T) {
 	flag.Parse()
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -32,7 +33,7 @@ func main() {
 	publicKey := "public-key-contents"
 	r, err := c.FetchAttestation(ctx, &pb.FetchAttestationRequest{PublicKey: publicKey})
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		log.Fatalf("could not get attestation: %v", err)
 	}
 	log.Printf("Attestation: %s", r.GetAttestation())
 }

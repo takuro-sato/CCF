@@ -24,19 +24,14 @@ type server struct {
 }
 
 func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRequest) (*pb.FetchAttestationReply, error) {
-	// IMPROVE: Use logging.Debug()
-	log.Printf("Received: %v", in.GetPublicKey())
-
 	reportData := [64]byte{}
 	for i, x := range []byte(in.GetPublicKey()) {
 		reportData[i] = x
 	}
 	reportBytes, err := attest.FetchAttestationReportByte(reportData)
 	if err != nil {
-		fmt.Println("Failed to fetch attestation report:", err)
-		return nil, fmt.Errorf("failed to fetch attestation report")
+		return nil, fmt.Errorf("failed to fetch attestation report: %s", err)
 	}
-	// log.Printf("Attestation: %v", hex.EncodeToString(reportBytes))
 	return &pb.FetchAttestationReply{Attestation: reportBytes}, nil
 }
 
@@ -58,7 +53,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterAttestationContainerServer(s, &server{})
-	log.Printf("server listening at %v", lis.Addr())
+	log.Printf("Server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

@@ -23,5 +23,9 @@ func TestFetchAndDeserializeReport(t *testing.T) {
 		t.Fatalf("Fetching report failed: %v", err)
 	}
 	expectedByteString := hex.EncodeToString(reportData[:])
-	assertEqual(t, "Check report data", expectedByteString, hex.EncodeToString(reportBytes[80:144]))
+	// Confirm `report data` (user provided 64 byte data) is correct
+	// Offset of `report data` is specified in SEV-SNP Firmware ABI Specification Table 21
+	// https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
+	const REPORT_DATA_OFFSET = 80
+	assertEqual(t, "Check report data", expectedByteString, hex.EncodeToString(reportBytes[REPORT_DATA_OFFSET:REPORT_DATA_OFFSET+REPORT_DATA_SIZE]))
 }

@@ -16,5 +16,5 @@ message FetchAttestationRequest {
 }
 
 message FetchAttestationReply {
-  string attestation = 1;
+  bytes attestation = 1;
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"log"
 	"testing"
@@ -35,5 +36,5 @@ func TestFetchReport(t *testing.T) {
 	if err != nil {
 		log.Fatalf("could not get attestation: %v", err)
 	}
-	log.Printf("Attestation: %s", r.GetAttestation())
+	log.Printf("Attestation: %v", hex.EncodeToString(r.GetAttestation()))
 }

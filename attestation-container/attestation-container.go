@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -24,6 +25,7 @@ type server struct {
 }
 
 func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRequest) (*pb.FetchAttestationReply, error) {
+	// IMPROVE: Use logging.Debug()
 	log.Printf("Received: %v", in.GetPublicKey())
 
 	reportData := [64]byte{}
@@ -35,14 +37,8 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		fmt.Println("Failed to fetch attestation report:", err)
 		return nil, fmt.Errorf("failed to fetch attestation report")
 	}
-	var SNPReport attest.SNPAttestationReport
-	if err := SNPReport.DeserializeReport(reportBytes); err != nil {
-		fmt.Println("Failed to deserialize attestation report")
-		return nil, fmt.Errorf("failed to deserialize attestation report")
-	}
-	// IMPROVE: Use logging.Debug()
-	// fmt.Printf("Deserialized attestation: %#v\n", SNPReport)
-	return &pb.FetchAttestationReply{Attestation: "Attestation report: " + fmt.Sprintf("%#v\n", SNPReport)}, nil
+	log.Printf("Attestation: %v", hex.EncodeToString(reportBytes))
+	return &pb.FetchAttestationReply{Attestation: reportBytes}, nil
 }
 
 func main() {

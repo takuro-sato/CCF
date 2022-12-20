@@ -26,7 +26,10 @@ type server struct {
 func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRequest) (*pb.FetchAttestationReply, error) {
 	log.Printf("Received: %v", in.GetPublicKey())
 
-	reportData := []byte(in.GetPublicKey()) // Data for `report data` field in attestation report
+	reportData := [64]byte{}
+	for i, x := range []byte(in.GetPublicKey()) {
+		reportData[i] = x
+	}
 	reportBytes, err := attest.FetchAttestationReportByte(reportData)
 	if err != nil {
 		fmt.Println("Failed to fetch attestation report:", err)

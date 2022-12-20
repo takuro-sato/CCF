@@ -12,7 +12,11 @@ func assertEqual[T comparable](t *testing.T, description string, expect T, actua
 }
 
 func TestFetchAndDeserializeReport(t *testing.T) {
-	reportData := [64]byte{0, 1, 2, 3, 4, 5}
+	// Report data for test
+	reportData := [REPORT_DATA_SIZE]byte{}
+	for i := 0; i < REPORT_DATA_SIZE; i++ {
+		reportData[i] = byte(i)
+	}
 
 	reportBytes, err := FetchAttestationReportByte(reportData)
 	if err != nil {

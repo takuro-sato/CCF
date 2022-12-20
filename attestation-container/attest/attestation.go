@@ -1,6 +1,7 @@
 package attest
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -10,8 +11,12 @@ import (
 )
 
 const (
-	snpReportSize               = 1184
-	sevSnpGuestMsgReport uint64 = 3223868161
+	SNP_REPORT_SIZE                 = 1184
+	SEV_SNP_GUEST_MSG_REPORT uint64 = 3223868161
+	REPORT_DATA_SIZE                = 64
+	REPORT_REQ_SIZE                 = 96
+	RESPONSE_RESP_SIZE              = 1280
+	PAYLOAD_SIZE                    = 40
 )
 
 // In C, FamilyID and ImageID should be unit128
@@ -71,7 +76,7 @@ type SNPAttestationReport struct {
 
 func (r *SNPAttestationReport) DeserializeReport(report []uint8) error {
 
-	if len(report) != snpReportSize {
+	if len(report) != SNP_REPORT_SIZE {
 		return fmt.Errorf("invalid snp report size")
 	}
 
@@ -150,7 +155,68 @@ const (
 	SNP_MSG_TYPE_MAX     = 15
 )
 
-func FetchAttestationReportByte(reportData []byte) ([]byte, error) {
+func createReportReqBytes(reportData [REPORT_DATA_SIZE]byte) [REPORT_REQ_SIZE]byte {
+	reportReqBytes := [REPORT_REQ_SIZE]byte{}
+	for i := 0; i < REPORT_DATA_SIZE; i++ {
+		reportReqBytes[i] = reportData[i]
+	}
+	return reportReqBytes
+}
+
+func createPayloadBytes(reportReqBytes [REPORT_REQ_SIZE]byte, responseRespBytes [RESPONSE_RESP_SIZE]byte) ([PAYLOAD_SIZE]byte, error) {
+	payload := [PAYLOAD_SIZE]byte{}
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.LittleEndian, uint8(SNP_MSG_REPORT_REQ)); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint8(SNP_MSG_REPORT_RSP)); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint8(1)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, uint8(0)); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint16(REPORT_REQ_SIZE)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, uint16(0)); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(uintptr(unsafe.Pointer(&reportReqBytes[0])))); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint16(RESPONSE_RESP_SIZE)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, uint16(0)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(uintptr(unsafe.Pointer(&responseRespBytes[0])))); err != nil {
+		return payload, err
+	}
+	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, uint32(0)); err != nil {
+		return payload, err
+	}
+	for i, x := range buf.Bytes() {
+		payload[i] = x
+	}
+	return payload, nil
+}
+
+func FetchAttestationReportByte(reportData [64]byte) ([]byte, error) {
 	path := "/dev/sev"
 	fd, err := unix.Open(path, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
@@ -158,29 +224,18 @@ func FetchAttestationReportByte(reportData []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	var msgReportIn = new(MsgReportReq)
-	// IMPROVE
-	for i := 0; i < 64 && i < len(reportData); i++ {
-		msgReportIn.ReportData[i] = reportData[i]
-	}
-	var msgReportOut = new(MsgResponseResp)
-
-	var payload = SEVSNPGuestRequest{
-		ReqMsgType:    SNP_MSG_REPORT_REQ,
-		RspMsgType:    SNP_MSG_REPORT_RSP,
-		MsgVersion:    1,
-		RequestLen:    uint16(96),
-		RequestUaddr:  uint64(uintptr(unsafe.Pointer(&msgReportIn))),
-		ResponseLen:   uint16(1280),
-		ResponseUaddr: uint64(uintptr(unsafe.Pointer(&msgReportOut))),
-		Error:         0,
+	reportReqBytes := createReportReqBytes(reportData)
+	responseRespBytes := [RESPONSE_RESP_SIZE]byte{}
+	payload, err := createPayloadBytes(reportReqBytes, responseRespBytes)
+	if err != nil {
+		return nil, err
 	}
 
 	_, _, errno := unix.Syscall(
 		unix.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(sevSnpGuestMsgReport),
-		uintptr(unsafe.Pointer(&payload)),
+		uintptr(SEV_SNP_GUEST_MSG_REPORT),
+		uintptr(unsafe.Pointer(&payload[0])),
 	)
 
 	if errno != 0 {
@@ -188,13 +243,13 @@ func FetchAttestationReportByte(reportData []byte) ([]byte, error) {
 		return nil, fmt.Errorf("ioctl failed:%v", errno)
 	}
 
-	if status := (*MsgResponseResp)(unsafe.Pointer(&msgReportOut)).Status; status != 0 {
+	if status := binary.LittleEndian.Uint32(responseRespBytes[0:4]); status != 0 {
 		fmt.Printf("fetching attestation report failed. status: %v\n", status)
 		return nil, fmt.Errorf("fetching attestation report failed. status: %v", status)
 	}
 
-	reportBytes := (*MsgResponseResp)(unsafe.Pointer(&msgReportOut)).Report[:]
-	// IMPROVE
-	fmt.Println("for GC", unsafe.Pointer(&msgReportIn), unsafe.Pointer(&msgReportOut), unsafe.Pointer(&payload))
-	return reportBytes, nil
+	fmt.Printf("responseRespBytes: %+v\n", responseRespBytes)
+	fmt.Printf("reportReqBytes: %+v\n", reportReqBytes)
+
+	return responseRespBytes[32 : 32+SNP_REPORT_SIZE], nil
 }

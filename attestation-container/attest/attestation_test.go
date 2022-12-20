@@ -14,7 +14,7 @@ func assertEqual[T comparable](t *testing.T, description string, expect T, actua
 func TestFetchAndDeserializeReport(t *testing.T) {
 	reportData := [64]byte{0, 1, 2, 3, 4, 5}
 
-	reportBytes, err := FetchAttestationReportByte(reportData[:])
+	reportBytes, err := FetchAttestationReportByte(reportData)
 	if err != nil {
 		t.Fatalf("Fetching report failed: %v", err)
 	}

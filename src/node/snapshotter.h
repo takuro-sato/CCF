@@ -15,6 +15,7 @@
 
 #include <deque>
 #include <optional>
+#include<unistd.h> 
 
 namespace ccf
 {
@@ -167,6 +168,7 @@ namespace ccf
         static_cast<consensus::Index>(snapshot_version);
       consensus::Index snapshot_evidence_idx =
         static_cast<consensus::Index>(evidence_version);
+      LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: snapshot_ snapshot_idx: {}, snapshot_evidence_idx {}", snapshot_idx, snapshot_evidence_idx);
       pending_snapshots.emplace_back(
         snapshot_idx,
         snapshot_evidence_idx,
@@ -194,8 +196,21 @@ namespace ccf
 
       for (auto it = pending_snapshots.begin(); it != pending_snapshots.end();)
       {
+        LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: update_indices idx: {}, it->evidence_idx: {}", idx, it->evidence_idx);
         if (idx > it->evidence_idx)
         {
+          if (!it->sig.has_value()) {
+            LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: : A_LOG: sig doesn't have value");
+          }
+          if (!it->tree.has_value()) {
+            LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: : tree doesn't have value");
+          }
+          if (!it->node_id.has_value()) {
+            LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: : node_id doesn't have value");
+          }
+          if (!it->node_cert.has_value()) {
+            LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: : node_cert doesn't have value");
+          }
           auto serialised_receipt = build_and_serialise_receipt(
             it->sig.value(),
             it->tree.value(),
@@ -311,9 +326,11 @@ namespace ccf
       const crypto::Pem& node_cert)
     {
       std::lock_guard<ccf::pal::Mutex> guard(lock);
+      LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: record_signature idx: {}", idx);
 
       for (auto& pending_snapshot : pending_snapshots)
       {
+        LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: pending_snapshot.evidence_idx: {}", pending_snapshot.evidence_idx);
         if (
           pending_snapshot.evidence_idx < idx &&
           !pending_snapshot.sig.has_value())
@@ -343,6 +360,7 @@ namespace ccf
 
     void schedule_snapshot(consensus::Index idx)
     {
+      LOG_TRACE_FMT("PENDING_SNAPSHOTS_DEBUG: schedule_snapshot idx: {}", idx);
       auto msg = std::make_unique<threading::Tmsg<SnapshotMsg>>(&snapshot_cb);
       msg->data.self = shared_from_this();
       msg->data.snapshot = store->snapshot(idx);

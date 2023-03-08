@@ -310,6 +310,10 @@ class Network:
             try:
                 node.wait_for_node_to_join(timeout=JOIN_TIMEOUT)
             except TimeoutError:
+                try:
+                    node.show_stack_trace()
+                except Exception as e:
+                    LOG.info(f"Failed to get stack trace: {e}")
                 LOG.error(f"New node {node.local_node_id} failed to join the network")
                 raise
 
@@ -764,6 +768,10 @@ class Network:
             )
         except TimeoutError as e:
             LOG.error(f"New pending node {node.node_id} failed to join the network")
+            try:
+                node.show_stack_trace()
+            except Exception as exception:
+                LOG.info(f"Failed to get stack trace: {exception}")
             if stop_on_error:
                 assert node.remote.check_done()
             errors, _ = node.stop()
@@ -801,6 +809,10 @@ class Network:
                 # has caught up and observed commit on the service open transaction.
                 node.wait_for_node_to_join(timeout=args.ledger_recovery_timeout)
         except (ValueError, TimeoutError):
+            try:
+                node.show_stack_trace()
+            except Exception as e:
+                LOG.info(f"Failed to get stack trace: {e}")
             LOG.error(f"New trusted node {node.node_id} failed to join the network")
             node.stop()
             raise
@@ -841,6 +853,10 @@ class Network:
                     pass
                 time.sleep(0.1)
             else:
+                try:
+                    remote_node.show_stack_trace()
+                except Exception as e:
+                    LOG.info(f"Failed to get stack trace: {e}")
                 raise TimeoutError(f"Timed out waiting for node to become removed: {r}")
 
         self.nodes.remove(node_to_retire)

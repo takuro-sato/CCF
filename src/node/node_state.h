@@ -2512,7 +2512,7 @@ namespace ccf
             kv::Version version, const Signatures::Write& w) {
             assert(w.has_value());
             auto sig = w.value();
-            s->record_signature(version, sig.sig, sig.node, sig.cert);
+            s->record_signature(version, sig.sig, sig.node, sig.cert); // called after bisiness logic is excecuted
             return kv::ConsensusHookPtr(nullptr);
           }));
 

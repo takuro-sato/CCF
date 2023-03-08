@@ -452,6 +452,12 @@ class Node:
             return self.remote.stop(*args, **kwargs)
         return [], []
 
+    def show_stack_trace(self):
+        # pylint: disable=no-member
+        if self.remote and self.remote.show_stack_trace:
+            # pylint: disable=no-member
+            self.remote.show_stack_trace()
+
     def is_stopped(self):
         return self.network_state == NodeNetworkState.stopped
 

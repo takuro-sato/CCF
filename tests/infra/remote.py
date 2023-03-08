@@ -517,7 +517,7 @@ class LocalRemote(CmdMixin):
             ignore_error_patterns=ignore_error_patterns,
         )
 
-    def _print_stack_trace(self):
+    def print_stack_trace(self):
         if shutil.which("lldb") != "":
             # To avoid errors on decoding lldb output as utf-8.
             # We shoud find a way to force lldb to use utf-8.
@@ -570,7 +570,7 @@ class LocalRemote(CmdMixin):
                 LOG.exception(
                     f"Process didn't finish within {timeout} seconds. Tyring to get stack trace..."
                 )
-                self._print_stack_trace()
+                self.print_stack_trace()
                 raise
 
             exit_code = self.proc.returncode

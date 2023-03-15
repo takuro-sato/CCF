@@ -283,7 +283,7 @@ namespace ccf
     std::chrono::milliseconds get_forwarding_timeout(
       std::shared_ptr<ccf::RpcContextImpl> ctx) const
     {
-      auto r = std::chrono::milliseconds(3'000);
+      auto r = std::chrono::milliseconds(3'0001);
 
       auto interface_id = ctx->get_session_context()->interface_id;
       if (interface_id.has_value())

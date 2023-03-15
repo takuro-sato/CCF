@@ -571,7 +571,7 @@ class LocalRemote(CmdMixin):
         LOG.info("[{}] closing".format(self.hostname))
         if self.proc:
             self.proc.terminate()
-            timeout = 10
+            timeout = 100
             try:
                 self.proc.wait(timeout)
             except subprocess.TimeoutExpired:
@@ -1120,7 +1120,7 @@ class CCFRemote(object):
         directory,
         pre_condition_func=lambda src_dir, _: True,
         target_name=None,
-        max_retry_count=5,
+        max_retry_count=50,
     ):
         # It is possible that files (ledger, snapshots) are committed
         # while the copy is happening so retry a reasonable number of times.

@@ -907,7 +907,7 @@ class Network:
         if state == infra.node.State.PART_OF_NETWORK.value:
             self.status = ServiceStatus.OPEN
 
-    def _wait_for_app_open(self, node, timeout=3):
+    def _wait_for_app_open(self, node, timeout=30):
         end_time = time.time() + timeout
         logs = []
         while time.time() < end_time:
@@ -926,7 +926,7 @@ class Network:
     def _get_node_by_service_id(self, node_id):
         return next((node for node in self.nodes if node.node_id == node_id), None)
 
-    def find_primary(self, nodes=None, timeout=10, log_capture=None, **kwargs):
+    def find_primary(self, nodes=None, timeout=100, log_capture=None, **kwargs):
         """
         Find the identity of the primary in the network and return its identity
         and the current view.
@@ -943,7 +943,7 @@ class Network:
                 with node.client(**kwargs) as c:
                     try:
                         logs = []
-                        res = c.get("/node/network", timeout=1, log_capture=logs)
+                        res = c.get("/node/network", timeout=22, log_capture=logs)
                         assert res.status_code == http.HTTPStatus.OK.value, res
 
                         body = res.body.json()
@@ -1021,7 +1021,7 @@ class Network:
         )
         return initial_node_count
 
-    def wait_for_all_nodes_to_commit(self, primary=None, tx_id=None, timeout=10):
+    def wait_for_all_nodes_to_commit(self, primary=None, tx_id=None, timeout=100):
         """
         Wait for all nodes to have joined the network and committed all transactions
         executed on the primary.

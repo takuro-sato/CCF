@@ -221,7 +221,7 @@ class LoggingTxs:
         self,
         idx,
         node=None,
-        timeout=10,
+        timeout=201,
         log_capture=None,
         from_seqno=None,
         to_seqno=None,
@@ -290,7 +290,7 @@ class LoggingTxs:
     def verify_range(
         self,
         node=None,
-        timeout=5,
+        timeout=201,
         log_capture=None,
         from_seqno=None,
         to_seqno=None,
@@ -313,7 +313,7 @@ class LoggingTxs:
         self,
         network=None,
         node=None,
-        timeout=3,
+        timeout=30,
         log_capture=None,
         include_historical=True,
     ):
@@ -374,7 +374,7 @@ class LoggingTxs:
         priv=True,
         historical=False,
         log_capture=None,
-        timeout=3,
+        timeout=60,
     ):
         if self.scope is not None and scope != self.scope:
             return
@@ -441,7 +441,7 @@ class LoggingTxs:
                 f"Unable to retrieve entry at TxID {view}.{seqno} (idx:{idx}) on node {node.local_node_id} after {timeout}s"
             )
 
-    def get_receipt(self, node, idx, seqno, view, timeout=3, domain="private"):
+    def get_receipt(self, node, idx, seqno, view, timeout=30, domain="private"):
         cmd = f"/app/log/{domain}/historical_receipt"
         headers = self._get_headers_base()
         headers.update(

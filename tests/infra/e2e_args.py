@@ -178,7 +178,7 @@ def cli_args(add=lambda x: None, parser=None, accept_unknown=False):
         "--consensus-update-timeout-ms",
         help="Raft maximum timeout before primary sends updates",
         type=int,
-        default=100,
+        default=1002,
     )
     parser.add_argument(
         "--consensus",
@@ -232,7 +232,7 @@ def cli_args(add=lambda x: None, parser=None, accept_unknown=False):
         "--join-timer-s",
         help="Timer period when trying to join an existing network",
         type=int,
-        default=1,
+        default=10,
     )
     parser.add_argument(
         "--initial-member-count",

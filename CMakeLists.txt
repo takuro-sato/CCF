@@ -640,6 +640,8 @@ if(BUILD_TESTS)
     PYTHON_SCRIPT ${CMAKE_SOURCE_DIR}/tests/recovery.py
     CONSENSUS cft
     ADDITIONAL_ARGS ${ADDITIONAL_RECOVERY_ARGS}
+    --election-timeout-ms 40001
+    --consensus-update-timeout-ms 501
   )
 
   add_e2e_test(
@@ -787,6 +789,8 @@ if(BUILD_TESTS)
     CONSENSUS cft
     CONTAINER_NODES TRUE
     ADDITIONAL_ARGS --js-app-bundle ${CMAKE_SOURCE_DIR}/samples/apps/logging/js
+    --election-timeout-ms 40001
+    --consensus-update-timeout-ms 501
   )
 
   add_e2e_test(

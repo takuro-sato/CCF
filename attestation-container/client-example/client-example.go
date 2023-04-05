@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"flag"
@@ -76,36 +77,50 @@ func main() {
 		log.Fatalf("endorsementCertificates does not contain 3 certificates, found %d", chainLen)
 	}
 	// log.Printf("Attestation endorsement certificates: %v", hex.EncodeToString(endorsementCertificates))
+	log.Printf("Attestation endorsement certificates: %v", string(endorsementCertificates))
 
-	// chipCertificate := certChain[0]
-	// sevVersionCertificate := certChain[1]
-	// rootCertificate := certChain[2]
-
-	// First, create the set of root certificates. For this example we only
-	// have one. It's also possible to omit this in order to use the
-	// default root set of the current operating system.
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(endorsementCertificates)
-	if !ok {
-		log.Fatalf("failed to parse root certificate 0")
+	chipCertificate, err := x509.ParseCertificate(certChain[0])
+	if chipCertificate == nil {
+		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
+	}
+	sevVersionCertificate, err := x509.ParseCertificate(certChain[1])
+	if sevVersionCertificate == nil {
+		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
+	}
+	rootCertificate, err := x509.ParseCertificate(certChain[2])
+	if rootCertificate == nil {
+		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 
-	block, _ := pem.Decode(endorsementCertificates)
+	knownRootOfTrustPublicKey := []byte(`-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0Ld52RJOdeiJlqK2JdsV
+mD7FktuotWwX1fNgW41XY9Xz1HEhSUmhLz9Cu9DHRlvgJSNxbeYYsnJfvyjx1MfU
+0V5tkKiU1EesNFta1kTA0szNisdYc9isqk7mXT5+KfGRbfc4V/9zRIcE8jlHN61S
+1ju8X93+6dxDUrG2SzxqJ4BhqyYmUDruPXJSX4vUc01P7j98MpqOS95rORdGHeI5
+2Naz5m2B+O+vjsC060d37jY9LFeuOP4Meri8qgfi2S5kKqg/aF6aPtuAZQVR7u3K
+FYXP59XmJgtcog05gmI0T/OitLhuzVvpZcLph0odh/1IPXqx3+MnjD97A7fXpqGd
+/y8KxX7jksTEzAOgbKAeam3lm+3yKIcTYMlsRMXPcjNbIvmsBykD//xSniusuHBk
+gnlENEWx1UcbQQrs+gVDkuVPhsnzIRNgYvM48Y+7LGiJYnrmE8xcrexekBxrva2V
+9TJQqnN3Q53kt5viQi3+gCfmkwC0F0tirIZbLkXPrPwzZ0M9eNxhIySb2npJfgnq
+z55I0u33wh4r0ZNQeTGfw03MBUtyuzGesGkcw+loqMaq1qR4tjGbPYxCvpCq7+Og
+pCCoMNit2uLo9M18fHz10lOMT8nWAUvRZFzteXCm+7PHdYPlmQwUw3LvenJ/ILXo
+QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
+-----END PUBLIC KEY-----`)
+
+	block, _ := pem.Decode(knownRootOfTrustPublicKey)
 	if block == nil {
-		log.Fatalf("failed to parse certificate PEM 1")
+		log.Fatal("failed to decode PEM block containing public key")
 	}
-	cert, err := x509.ParseCertificate(block.Bytes)
+
+	knownPub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		log.Fatalf("failed to parse certificate: " + err.Error())
+		log.Fatal(err)
 	}
 
-	opts := x509.VerifyOptions{
-		Roots: roots,
+	if !rootCertificate.PublicKey.(*rsa.PublicKey).Equal(knownPub.(*rsa.PublicKey)) {
+		log.Fatalf("SEV-SNP: The root of trust public key for this attestation was not the expected one, %x, %x", rootCertificate.PublicKey.(*rsa.PublicKey), knownPub.(*rsa.PublicKey))
 	}
-
-	if _, err := cert.Verify(opts); err != nil {
-		log.Fatalf("failed to verify certificate: " + err.Error())
-	}
+	// log.Println(string(rootCertificate.RawSubjectPublicKeyInfo))
 
 	if len(r.GetUvmEndorsements()) == 0 {
 		log.Fatalf("UVM endorsement is empty")

@@ -122,6 +122,26 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	}
 	// log.Println(string(rootCertificate.RawSubjectPublicKeyInfo))
 
+	roots := x509.NewCertPool()
+	roots.AddCert(rootCertificate)
+	opts := x509.VerifyOptions{
+		Roots: roots,
+	}
+
+	if _, err := rootCertificate.Verify(opts); err != nil {
+		log.Fatalf("SEV-SNP: The root of trust public key for this attestation was not self signed as expected" + err.Error())
+	}
+
+	// It's not in CCF. Check if it's necessary
+	if _, err := sevVersionCertificate.Verify(opts); err != nil {
+		log.Fatalf("SEV-SNP: The chain of signatures from the root of trust to this attestation is broken" + err.Error())
+	}
+
+	opts.Roots.AddCert(sevVersionCertificate)
+	if _, err := chipCertificate.Verify(opts); err != nil {
+		log.Fatalf("SEV-SNP: The chain of signatures from the root of trust to this attestation is broken" + err.Error())
+	}
+
 	if len(r.GetUvmEndorsements()) == 0 {
 		log.Fatalf("UVM endorsement is empty")
 	}

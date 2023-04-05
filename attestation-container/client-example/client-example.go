@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
+	"crypto/x509"
 	"encoding/pem"
 	"flag"
 	"log"
@@ -62,22 +62,53 @@ func main() {
 	if len(attestation) == 0 {
 		log.Fatalf("attestation is empty")
 	}
-	log.Printf("Attestation: %v", hex.EncodeToString(attestation))
+	// log.Printf("Attestation: %v", hex.EncodeToString(attestation))
 
 	// Verify endorsements
 	endorsementCertificates := r.GetAttestationEndorsements()
 	if len(endorsementCertificates) == 0 {
 		log.Fatalf("endorsementCertificates is empty")
 	}
-	chainLen := len(splitPemChain(endorsementCertificates))
+	certChain := splitPemChain(endorsementCertificates)
+	chainLen := len(certChain)
 	if chainLen != 3 {
 		// Expecting VCEK, ASK and ARK
 		log.Fatalf("endorsementCertificates does not contain 3 certificates, found %d", chainLen)
 	}
-	log.Printf("Attestation endorsement certificates: %v", hex.EncodeToString(endorsementCertificates))
+	// log.Printf("Attestation endorsement certificates: %v", hex.EncodeToString(endorsementCertificates))
+
+	// chipCertificate := certChain[0]
+	// sevVersionCertificate := certChain[1]
+	// rootCertificate := certChain[2]
+
+	// First, create the set of root certificates. For this example we only
+	// have one. It's also possible to omit this in order to use the
+	// default root set of the current operating system.
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM(endorsementCertificates)
+	if !ok {
+		log.Fatalf("failed to parse root certificate 0")
+	}
+
+	block, _ := pem.Decode(endorsementCertificates)
+	if block == nil {
+		log.Fatalf("failed to parse certificate PEM 1")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		log.Fatalf("failed to parse certificate: " + err.Error())
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: roots,
+	}
+
+	if _, err := cert.Verify(opts); err != nil {
+		log.Fatalf("failed to verify certificate: " + err.Error())
+	}
 
 	if len(r.GetUvmEndorsements()) == 0 {
 		log.Fatalf("UVM endorsement is empty")
 	}
-	log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
+	// log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
 }

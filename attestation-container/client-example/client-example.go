@@ -242,6 +242,7 @@ func main() {
 		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 
+	// From https://developer.amd.com/sev/
 	knownRootOfTrustPublicKey := []byte(`-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0Ld52RJOdeiJlqK2JdsV
 mD7FktuotWwX1fNgW41XY9Xz1HEhSUmhLz9Cu9DHRlvgJSNxbeYYsnJfvyjx1MfU

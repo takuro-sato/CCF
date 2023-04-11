@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"microsoft/attestation-container/client-example/cosesign1"
+	didx509resolver "microsoft/attestation-container/client-example/did-x509-resolver"
 	pb "microsoft/attestation-container/protobuf"
 
 	"google.golang.org/grpc"
@@ -324,9 +325,31 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 		log.Fatalf("UVM endorsement is empty")
 	}
 
-	_, err = cosesign1.UnpackAndValidateCOSE1CertChain(uvmEndorsements)
+	unpacked, err := cosesign1.UnpackAndValidateCOSE1CertChain(uvmEndorsements)
 	if err != nil {
 		log.Fatalf("InjectFragment failed COSE validation: %s", err.Error())
 	}
 	// log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
+
+	payloadString := string(unpacked.Payload[:])
+	issuer := unpacked.Issuer
+	feed := unpacked.Feed
+	chainPem := unpacked.ChainPem
+
+	log.Printf("unpacked COSE1 cert chain: issuer: %s, feed: %s, cty: %s, chainPem: %s", issuer, feed, unpacked.ContentType, chainPem)
+
+	log.Printf("unpacked COSE1 payload: payload: %s", payloadString)
+
+	if len(issuer) == 0 || len(feed) == 0 { // must both be present
+		log.Fatalf("either issuer and feed must both be provided in the COSE_Sign1 protected header")
+	}
+
+	// Resolve returns a did doc that we don't need
+	// we only care if there was an error or not
+	_, err = didx509resolver.Resolve(unpacked.ChainPem, issuer, true)
+	if err != nil {
+		// log.G(ctx).Printf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
+		log.Fatalf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
+	}
+
 }

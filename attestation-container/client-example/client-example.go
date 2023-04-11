@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"flag"
 	"fmt"
@@ -188,6 +189,28 @@ func deserializeSignature(hexSignature string) (ECDSASignatureP384SHA384, error)
 	}, nil
 }
 
+// DID stuf
+// From https://www.w3.org/TR/did-core
+type DIDDocumentVerificationMethod struct {
+	Id                  string              `json:"id"`
+	Type                string              `json:"type"`
+	Controller          string              `json:"controller"`
+	JSonWebKeyRSAPublic JSONWebKeyRSAPublic `json:"publicKeyJwk"`
+}
+
+type JSONWebKeyRSAPublic struct {
+	E string `json:"e"` // base64url
+	N string `json:"N"` // base64url
+}
+
+type DIDDocument struct {
+	Id                 string                          `json:"id"`
+	Context            string                          `json:"@context"`
+	Type               string                          `json:"type"`
+	VerificationMethod []DIDDocumentVerificationMethod `json:"verificationMethod"`
+	AssertionMethod    string                          `json:"assertionMethod"`
+}
+
 func main() {
 	flag.Parse()
 	// Set up a connection to the server.
@@ -353,5 +376,10 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	}
 
 	log.Printf("didDocumentStr: %s", didDocumentStr)
-
+	didDocument := new(DIDDocument)
+	err = json.Unmarshal([]byte(didDocumentStr), &didDocument)
+	if err != nil {
+		log.Fatalf("Badly formed did document: %s", err.Error())
+	}
+	fmt.Printf("Unmarshalled did doc: %#v\n", didDocument)
 }

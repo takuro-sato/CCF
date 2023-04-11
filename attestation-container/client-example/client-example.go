@@ -346,10 +346,12 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 
 	// Resolve returns a did doc that we don't need
 	// we only care if there was an error or not
-	_, err = didx509resolver.Resolve(unpacked.ChainPem, issuer, true)
+	didDocumentStr, err := didx509resolver.Resolve(unpacked.ChainPem, issuer, true)
 	if err != nil {
 		// log.G(ctx).Printf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
 		log.Fatalf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
 	}
+
+	log.Printf("didDocumentStr: %s", didDocumentStr)
 
 }

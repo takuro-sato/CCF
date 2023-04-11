@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	didx509resolver "github.com/Microsoft/hcsshim/internal/did-x509-resolver"
+	didx509resolver "microsoft/attestation-container/client-example/did-x509-resolver"
 	"github.com/sirupsen/logrus"
 )
 

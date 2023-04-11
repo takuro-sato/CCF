@@ -16,6 +16,7 @@ import (
 	"net"
 	"time"
 
+	"microsoft/attestation-container/client-example/cosesign1"
 	pb "microsoft/attestation-container/protobuf"
 
 	"google.golang.org/grpc"
@@ -318,9 +319,14 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	} else {
 		log.Fatalf("Attestation report's signature is not valid")
 	}
-
-	if len(r.GetUvmEndorsements()) == 0 {
+	uvmEndorsements := r.GetUvmEndorsements()
+	if len(uvmEndorsements) == 0 {
 		log.Fatalf("UVM endorsement is empty")
+	}
+
+	_, err = cosesign1.UnpackAndValidateCOSE1CertChain(uvmEndorsements)
+	if err != nil {
+		log.Fatalf("InjectFragment failed COSE validation: %s", err.Error())
 	}
 	// log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -189,12 +190,12 @@ func deserializeSignature(hexSignature string) (ECDSASignatureP384SHA384, error)
 	}, nil
 }
 
-// DID stuf
+// UVM stuf
 // From https://www.w3.org/TR/did-core
 type DIDDocumentVerificationMethod struct {
-	Id                  string              `json:"id"`
-	Type                string              `json:"type"`
-	Controller          string              `json:"controller"`
+	Id                  string               `json:"id"`
+	Type                string               `json:"type"`
+	Controller          string               `json:"controller"`
 	JSonWebKeyRSAPublic *JSONWebKeyRSAPublic `json:"publicKeyJwk"`
 }
 
@@ -209,6 +210,26 @@ type DIDDocument struct {
 	Type               string                          `json:"type"`
 	VerificationMethod []DIDDocumentVerificationMethod `json:"verificationMethod"`
 	AssertionMethod    string                          `json:"assertionMethod"`
+}
+
+type UVMEndorsementsPayload struct {
+	GuestSVN          string `json:"x-ms-sevsnpvm-guestsvn"`
+	LaunchMeasurement string `json:"x-ms-sevsnpvm-launchmeasurement"`
+}
+
+func jwkRSAPubToRSAPub(jwkRSAPub JSONWebKeyRSAPublic) (rsa.PublicKey, error) {
+	eData, err := base64.RawURLEncoding.DecodeString(jwkRSAPub.E)
+	if err != nil {
+		log.Fatalf("Failed to decode `E` of JWK RSA public key %s: %s", jwkRSAPub.E, err.Error())
+	}
+	nData, err := base64.RawURLEncoding.DecodeString(jwkRSAPub.N)
+	if err != nil {
+		log.Fatalf("Failed to decode `N` of JWK RSA public key %s: %s", jwkRSAPub.N, err.Error())
+	}
+	return rsa.PublicKey{
+		E: int(new(big.Int).SetBytes(eData).Int64()),
+		N: new(big.Int).SetBytes(nData),
+	}, nil
 }
 
 func main() {
@@ -387,17 +408,30 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 		log.Fatalf("Could not find verification method for DID document: %s", didDocumentStr)
 	}
 
-	var pubKey *JSONWebKeyRSAPublic
+	var jwkPubKey *JSONWebKeyRSAPublic
 	for _, vm := range didDocument.VerificationMethod {
 		if vm.Controller == issuer && vm.JSonWebKeyRSAPublic != nil {
-			pubKey = vm.JSonWebKeyRSAPublic
+			jwkPubKey = vm.JSonWebKeyRSAPublic
 			log.Printf("Found public key: %#v\n", *vm.JSonWebKeyRSAPublic)
 			break
 		}
 	}
 
-	if pubKey == nil {
+	if jwkPubKey == nil {
 		log.Fatalf("Could not find matching public key for DID %s for %s", issuer, didDocumentStr)
 	}
 
+	// Maybe this is not necessary
+	_, err = jwkRSAPubToRSAPub(*jwkPubKey)
+
+	uvmEndorsementsPayload := new(UVMEndorsementsPayload)
+	err = json.Unmarshal([]byte(payloadString), &uvmEndorsementsPayload)
+	if err != nil {
+		log.Fatalf("Badly formed UVM endorsements payload: %s", err.Error())
+	}
+
+	if deserializedReport.Measurement != uvmEndorsementsPayload.LaunchMeasurement {
+		log.Fatalf("Launch measurement in UVM endorsements payload %s is not equal to UVM attestation measurement %s", uvmEndorsementsPayload.LaunchMeasurement, deserializedReport.Measurement)
+	}
+	log.Printf("Successfully verified endorsements for attested measurement %s against %s, feed %s, svn %s\n", deserializedReport.Measurement, issuer, feed, uvmEndorsementsPayload.GuestSVN)
 }

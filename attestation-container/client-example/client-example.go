@@ -195,7 +195,7 @@ type DIDDocumentVerificationMethod struct {
 	Id                  string              `json:"id"`
 	Type                string              `json:"type"`
 	Controller          string              `json:"controller"`
-	JSonWebKeyRSAPublic JSONWebKeyRSAPublic `json:"publicKeyJwk"`
+	JSonWebKeyRSAPublic *JSONWebKeyRSAPublic `json:"publicKeyJwk"`
 }
 
 type JSONWebKeyRSAPublic struct {
@@ -382,4 +382,22 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 		log.Fatalf("Badly formed did document: %s", err.Error())
 	}
 	fmt.Printf("Unmarshalled did doc: %#v\n", didDocument)
+
+	if len(didDocument.VerificationMethod) == 0 {
+		log.Fatalf("Could not find verification method for DID document: %s", didDocumentStr)
+	}
+
+	var pubKey *JSONWebKeyRSAPublic
+	for _, vm := range didDocument.VerificationMethod {
+		if vm.Controller == issuer && vm.JSonWebKeyRSAPublic != nil {
+			pubKey = vm.JSonWebKeyRSAPublic
+			log.Printf("Found public key: %#v\n", *vm.JSonWebKeyRSAPublic)
+			break
+		}
+	}
+
+	if pubKey == nil {
+		log.Fatalf("Could not find matching public key for DID %s for %s", issuer, didDocumentStr)
+	}
+
 }

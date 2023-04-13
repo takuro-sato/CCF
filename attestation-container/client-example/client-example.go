@@ -195,8 +195,7 @@ type UVMEndorsementsPayload struct {
 	LaunchMeasurement string `json:"x-ms-sevsnpvm-launchmeasurement"`
 }
 
-func main() {
-	flag.Parse()
+func fetchAttestation() *pb.FetchAttestationReply {
 	// Set up a connection to the server.
 	dialer := func(addr string, t time.Duration) (net.Conn, error) {
 		return net.Dial("unix", addr)
@@ -217,15 +216,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not get attestation: %v", err)
 	}
-	// Verify attestation
-	attestation := r.GetAttestation()
-	if len(attestation) == 0 {
-		log.Fatalf("attestation is empty")
-	}
-	// log.Printf("Attestation: %v", hex.EncodeToString(attestation))
+	return r
+}
 
-	// Verify endorsements
-	endorsementCertificates := r.GetAttestationEndorsements()
+func verifyAttestationEndorsements(endorsementCertificates []byte) * x509.Certificate {
 	if len(endorsementCertificates) == 0 {
 		log.Fatalf("endorsementCertificates is empty")
 	}
@@ -301,7 +295,10 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	if _, err := chipCertificate.Verify(opts); err != nil {
 		log.Fatalf("SEV-SNP: The chain of signatures from the root of trust to this attestation is broken" + err.Error())
 	}
+	return chipCertificate
+}
 
+func verifyAttestationReportSignature(attestation []byte, chipCertificate * x509.Certificate) string {
 	deserializedReport := new(SNPAttestationReport)
 	if err := deserializedReport.DeserializeReport(attestation); err != nil {
 		log.Fatalf("Failed to deserialize attestation report: %s", err.Error())
@@ -327,7 +324,11 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	} else {
 		log.Fatalf("Attestation report's signature is not valid")
 	}
-	uvmEndorsements := r.GetUvmEndorsements()
+
+	return deserializedReport.Measurement
+}
+
+func verifyUVMEndorsements(uvmEndorsements []byte, measurementInReport string) {
 	if len(uvmEndorsements) == 0 {
 		log.Fatalf("UVM endorsement is empty")
 	}
@@ -365,8 +366,17 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 		log.Fatalf("Badly formed UVM endorsements payload: %s", err.Error())
 	}
 
-	if deserializedReport.Measurement != uvmEndorsementsPayload.LaunchMeasurement {
-		log.Fatalf("Launch measurement in UVM endorsements payload %s is not equal to UVM attestation measurement %s", uvmEndorsementsPayload.LaunchMeasurement, deserializedReport.Measurement)
+	if measurementInReport != uvmEndorsementsPayload.LaunchMeasurement {
+		log.Fatalf("Launch measurement in UVM endorsements payload %s is not equal to UVM attestation measurement %s", uvmEndorsementsPayload.LaunchMeasurement, measurementInReport)
 	}
-	log.Printf("Successfully verified endorsements for attested measurement %s against %s, feed %s, svn %s\n", deserializedReport.Measurement, issuer, feed, uvmEndorsementsPayload.GuestSVN)
+	log.Printf("Successfully verified endorsements for attested measurement %s against %s, feed %s, svn %s\n", measurementInReport, issuer, feed, uvmEndorsementsPayload.GuestSVN)
+}
+
+func main() {
+	flag.Parse()
+	r := fetchAttestation()
+
+	chipCertificate := verifyAttestationEndorsements(r.GetAttestationEndorsements())
+	measurementInReport := verifyAttestationReportSignature(r.GetAttestation(), chipCertificate)
+	verifyUVMEndorsements(r.GetUvmEndorsements(), measurementInReport)
 }

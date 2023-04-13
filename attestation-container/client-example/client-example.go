@@ -60,6 +60,24 @@ const (
 	SIGNATURE_ALGO_ECDSA_P384_SHA384 = 1
 )
 
+// From https://developer.amd.com/sev/
+const (
+	AMD_MILAN_ROOT_SIGNING_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0Ld52RJOdeiJlqK2JdsV
+mD7FktuotWwX1fNgW41XY9Xz1HEhSUmhLz9Cu9DHRlvgJSNxbeYYsnJfvyjx1MfU
+0V5tkKiU1EesNFta1kTA0szNisdYc9isqk7mXT5+KfGRbfc4V/9zRIcE8jlHN61S
+1ju8X93+6dxDUrG2SzxqJ4BhqyYmUDruPXJSX4vUc01P7j98MpqOS95rORdGHeI5
+2Naz5m2B+O+vjsC060d37jY9LFeuOP4Meri8qgfi2S5kKqg/aF6aPtuAZQVR7u3K
+FYXP59XmJgtcog05gmI0T/OitLhuzVvpZcLph0odh/1IPXqx3+MnjD97A7fXpqGd
+/y8KxX7jksTEzAOgbKAeam3lm+3yKIcTYMlsRMXPcjNbIvmsBykD//xSniusuHBk
+gnlENEWx1UcbQQrs+gVDkuVPhsnzIRNgYvM48Y+7LGiJYnrmE8xcrexekBxrva2V
+9TJQqnN3Q53kt5viQi3+gCfmkwC0F0tirIZbLkXPrPwzZ0M9eNxhIySb2npJfgnq
+z55I0u33wh4r0ZNQeTGfw03MBUtyuzGesGkcw+loqMaq1qR4tjGbPYxCvpCq7+Og
+pCCoMNit2uLo9M18fHz10lOMT8nWAUvRZFzteXCm+7PHdYPlmQwUw3LvenJ/ILXo
+QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
+-----END PUBLIC KEY-----`
+)
+
 type ECDSASignatureP384SHA384 struct {
 	R *big.Int
 	S *big.Int
@@ -189,7 +207,6 @@ func deserializeSignature(hexSignature string) (ECDSASignatureP384SHA384, error)
 	}, nil
 }
 
-// UVM stuf
 type UVMEndorsementsPayload struct {
 	GuestSVN          string `json:"x-ms-sevsnpvm-guestsvn"`
 	LaunchMeasurement string `json:"x-ms-sevsnpvm-launchmeasurement"`
@@ -219,7 +236,7 @@ func fetchAttestation() *pb.FetchAttestationReply {
 	return r
 }
 
-func verifyAttestationEndorsements(endorsementCertificates []byte) * x509.Certificate {
+func verifyAttestationEndorsements(endorsementCertificates []byte) *x509.Certificate {
 	if len(endorsementCertificates) == 0 {
 		log.Fatalf("endorsementCertificates is empty")
 	}
@@ -245,22 +262,7 @@ func verifyAttestationEndorsements(endorsementCertificates []byte) * x509.Certif
 		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 
-	// From https://developer.amd.com/sev/
-	knownRootOfTrustPublicKey := []byte(`-----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0Ld52RJOdeiJlqK2JdsV
-mD7FktuotWwX1fNgW41XY9Xz1HEhSUmhLz9Cu9DHRlvgJSNxbeYYsnJfvyjx1MfU
-0V5tkKiU1EesNFta1kTA0szNisdYc9isqk7mXT5+KfGRbfc4V/9zRIcE8jlHN61S
-1ju8X93+6dxDUrG2SzxqJ4BhqyYmUDruPXJSX4vUc01P7j98MpqOS95rORdGHeI5
-2Naz5m2B+O+vjsC060d37jY9LFeuOP4Meri8qgfi2S5kKqg/aF6aPtuAZQVR7u3K
-FYXP59XmJgtcog05gmI0T/OitLhuzVvpZcLph0odh/1IPXqx3+MnjD97A7fXpqGd
-/y8KxX7jksTEzAOgbKAeam3lm+3yKIcTYMlsRMXPcjNbIvmsBykD//xSniusuHBk
-gnlENEWx1UcbQQrs+gVDkuVPhsnzIRNgYvM48Y+7LGiJYnrmE8xcrexekBxrva2V
-9TJQqnN3Q53kt5viQi3+gCfmkwC0F0tirIZbLkXPrPwzZ0M9eNxhIySb2npJfgnq
-z55I0u33wh4r0ZNQeTGfw03MBUtyuzGesGkcw+loqMaq1qR4tjGbPYxCvpCq7+Og
-pCCoMNit2uLo9M18fHz10lOMT8nWAUvRZFzteXCm+7PHdYPlmQwUw3LvenJ/ILXo
-QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
------END PUBLIC KEY-----`)
-
+	knownRootOfTrustPublicKey := []byte(AMD_MILAN_ROOT_SIGNING_PUBLIC_KEY)
 	block, _ := pem.Decode(knownRootOfTrustPublicKey)
 	if block == nil {
 		log.Fatal("failed to decode PEM block containing public key")
@@ -274,7 +276,6 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	if !rootCertificate.PublicKey.(*rsa.PublicKey).Equal(knownPub.(*rsa.PublicKey)) {
 		log.Fatalf("SEV-SNP: The root of trust public key for this attestation was not the expected one, %x, %x", rootCertificate.PublicKey.(*rsa.PublicKey), knownPub.(*rsa.PublicKey))
 	}
-	// log.Println(string(rootCertificate.RawSubjectPublicKeyInfo))
 
 	roots := x509.NewCertPool()
 	roots.AddCert(rootCertificate)
@@ -298,7 +299,7 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 	return chipCertificate
 }
 
-func verifyAttestationReportSignature(attestation []byte, chipCertificate * x509.Certificate) string {
+func verifyAttestationReportSignature(attestation []byte, chipCertificate *x509.Certificate) string {
 	deserializedReport := new(SNPAttestationReport)
 	if err := deserializedReport.DeserializeReport(attestation); err != nil {
 		log.Fatalf("Failed to deserialize attestation report: %s", err.Error())
@@ -337,7 +338,6 @@ func verifyUVMEndorsements(uvmEndorsements []byte, measurementInReport string) {
 	if err != nil {
 		log.Fatalf("InjectFragment failed COSE validation: %s", err.Error())
 	}
-	// log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
 
 	payloadString := string(unpacked.Payload[:])
 	issuer := unpacked.Issuer

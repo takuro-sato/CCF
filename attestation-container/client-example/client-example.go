@@ -219,7 +219,7 @@ func fetchAttestation() *pb.FetchAttestationReply {
 	}
 	conn, err := grpc.Dial(*addr, grpc.WithInsecure(), grpc.WithDialer(dialer))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("Did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewAttestationContainerClient(conn)
@@ -231,7 +231,7 @@ func fetchAttestation() *pb.FetchAttestationReply {
 	publicKey := []byte("public-key-contents")
 	r, err := c.FetchAttestation(ctx, &pb.FetchAttestationRequest{ReportData: publicKey})
 	if err != nil {
-		log.Fatalf("could not get attestation: %v", err)
+		log.Fatalf("Could not get attestation: %v", err)
 	}
 	return r
 }
@@ -246,26 +246,25 @@ func verifyAttestationEndorsements(endorsementCertificates []byte) *x509.Certifi
 		// Expecting VCEK, ASK and ARK
 		log.Fatalf("endorsementCertificates does not contain 3 certificates, found %d", chainLen)
 	}
-	// log.Printf("Attestation endorsement certificates: %v", hex.EncodeToString(endorsementCertificates))
 	log.Printf("Attestation endorsement certificates: %v", string(endorsementCertificates))
 
 	chipCertificate, err := x509.ParseCertificate(certChain[0])
 	if chipCertificate == nil {
-		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
+		log.Fatalf("Failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 	sevVersionCertificate, err := x509.ParseCertificate(certChain[1])
 	if sevVersionCertificate == nil {
-		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
+		log.Fatalf("Failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 	rootCertificate, err := x509.ParseCertificate(certChain[2])
 	if rootCertificate == nil {
-		log.Fatalf("failed to parse certificate rootCertificate PEM: " + err.Error())
+		log.Fatalf("Failed to parse certificate rootCertificate PEM: " + err.Error())
 	}
 
 	knownRootOfTrustPublicKey := []byte(AMD_MILAN_ROOT_SIGNING_PUBLIC_KEY)
 	block, _ := pem.Decode(knownRootOfTrustPublicKey)
 	if block == nil {
-		log.Fatal("failed to decode PEM block containing public key")
+		log.Fatal("Failed to decode PEM block containing public key")
 	}
 
 	knownPub, err := x509.ParsePKIXPublicKey(block.Bytes)
@@ -344,19 +343,18 @@ func verifyUVMEndorsements(uvmEndorsements []byte, measurementInReport string) {
 	feed := unpacked.Feed
 	chainPem := unpacked.ChainPem
 
-	log.Printf("unpacked COSE1 cert chain: issuer: %s, feed: %s, cty: %s, chainPem: %s", issuer, feed, unpacked.ContentType, chainPem)
+	log.Printf("Unpacked COSE1 cert chain: issuer: %s, feed: %s, cty: %s, chainPem: %s", issuer, feed, unpacked.ContentType, chainPem)
 
-	log.Printf("unpacked COSE1 payload: payload: %s", payloadString)
+	log.Printf("Unpacked COSE1 payload: payload: %s", payloadString)
 
 	if len(issuer) == 0 || len(feed) == 0 { // must both be present
-		log.Fatalf("either issuer and feed must both be provided in the COSE_Sign1 protected header")
+		log.Fatalf("Either issuer and feed must both be provided in the COSE_Sign1 protected header")
 	}
 
 	// Resolve returns a did doc that we don't need
 	// we only care if there was an error or not
 	_, err = didx509resolver.Resolve(unpacked.ChainPem, issuer, true)
 	if err != nil {
-		// log.G(ctx).Printf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
 		log.Fatalf("Badly formed fragment - did resolver failed to match fragment did:x509 from chain with purported issuer %s, feed %s - err %s", issuer, feed, err.Error())
 	}
 

@@ -17,9 +17,10 @@ import (
 	"net"
 	"time"
 
-	"microsoft/attestation-container/client-example/cosesign1"
-	didx509resolver "microsoft/attestation-container/client-example/did-x509-resolver"
 	pb "microsoft/attestation-container/protobuf"
+
+	cosesign1 "github.com/Microsoft/cosesign1go/pkg/cosesign1"
+	didx509resolver "github.com/Microsoft/didx509go/pkg/did-x509-resolver"
 
 	"google.golang.org/grpc"
 )

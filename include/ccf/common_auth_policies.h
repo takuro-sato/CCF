@@ -6,7 +6,6 @@
 #include "ccf/endpoints/authentication/cose_auth.h"
 #include "ccf/endpoints/authentication/empty_auth.h"
 #include "ccf/endpoints/authentication/jwt_auth.h"
-#include "ccf/endpoints/authentication/sig_auth.h"
 
 #include <memory>
 
@@ -27,21 +26,10 @@ namespace ccf
   static std::shared_ptr<UserCertAuthnPolicy> user_cert_auth_policy =
     std::make_shared<UserCertAuthnPolicy>();
 
-  /** Authenticate using HTTP request signature, and
-   * @c public:ccf.gov.users.certs table */
-  static std::shared_ptr<UserSignatureAuthnPolicy> user_signature_auth_policy =
-    std::make_shared<UserSignatureAuthnPolicy>();
-
   /** Authenticate using TLS session identity, and
    * @c public:ccf.gov.members.certs table */
   static std::shared_ptr<MemberCertAuthnPolicy> member_cert_auth_policy =
     std::make_shared<MemberCertAuthnPolicy>();
-
-  /** Authenticate using HTTP request signature, and
-   * @c public:ccf.gov.members.certs table */
-  static std::shared_ptr<MemberSignatureAuthnPolicy>
-    member_signature_auth_policy =
-      std::make_shared<MemberSignatureAuthnPolicy>();
 
   /** Authenticate using JWT, validating the token using the
    * @c public:ccf.gov.jwt.public_signing_key_issuer and
@@ -54,6 +42,11 @@ namespace ccf
   static std::shared_ptr<MemberCOSESign1AuthnPolicy>
     member_cose_sign1_auth_policy =
       std::make_shared<MemberCOSESign1AuthnPolicy>();
+
+  /** Authenticate using COSE Sign1 payloads, and
+   * @c public:ccf.gov.users.certs table */
+  static std::shared_ptr<UserCOSESign1AuthnPolicy> user_cose_sign1_auth_policy =
+    std::make_shared<UserCOSESign1AuthnPolicy>();
 
   /** A clear name for the empty auth policy, to reduce errors where it is
    * accidentally defaulted or unspecified.

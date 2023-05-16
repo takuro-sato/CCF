@@ -312,14 +312,16 @@ namespace loggingapp
         "recording messages at client-specified IDs. It demonstrates most of "
         "the features available to CCF apps.";
 
-      openapi_info.document_version = "1.20.0";
+      openapi_info.document_version = "2.2.0";
 
       index_per_public_key = std::make_shared<RecordsIndexingStrategy>(
         PUBLIC_RECORDS, context, 10000, 20);
       context.get_indexing_strategies().install_strategy(index_per_public_key);
 
       const ccf::AuthnPolicies auth_policies = {
-        ccf::jwt_auth_policy, ccf::user_cert_auth_policy};
+        ccf::jwt_auth_policy,
+        ccf::user_cert_auth_policy,
+        ccf::user_cose_sign1_auth_policy};
 
       // SNIPPET_START: record
       auto record = [this](auto& ctx, nlohmann::json&& params) {
@@ -897,54 +899,6 @@ namespace loggingapp
           return;
         }
         else if (
-          auto user_sig_ident =
-            ctx.template try_get_caller<ccf::UserSignatureAuthnIdentity>())
-        {
-          auto response = std::string("User HTTP signature");
-          response += fmt::format(
-            "\nThe caller is a user with ID: {}", user_sig_ident->user_id);
-          response += fmt::format(
-            "\nThe caller's cert is:\n{}", user_sig_ident->user_cert.str());
-
-          nlohmann::json user_data = nullptr;
-          if (
-            get_user_data_v1(ctx.tx, user_sig_ident->user_id, user_data) ==
-            ccf::ApiResult::OK)
-          {
-            response +=
-              fmt::format("\nThe caller's user data is: {}", user_data.dump());
-          }
-
-          ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
-          ctx.rpc_ctx->set_response_body(std::move(response));
-          return;
-        }
-        else if (
-          auto member_sig_ident =
-            ctx.template try_get_caller<ccf::MemberSignatureAuthnIdentity>())
-        {
-          auto response = std::string("Member HTTP signature");
-          response += fmt::format(
-            "\nThe caller is a member with ID: {}",
-            member_sig_ident->member_id);
-          response += fmt::format(
-            "\nThe caller's cert is:\n{}", member_sig_ident->member_cert.str());
-
-          nlohmann::json member_data = nullptr;
-          if (
-            get_member_data_v1(
-              ctx.tx, member_sig_ident->member_id, member_data) ==
-            ccf::ApiResult::OK)
-          {
-            response += fmt::format(
-              "\nThe caller's member data is: {}", member_data.dump());
-          }
-
-          ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
-          ctx.rpc_ctx->set_response_body(std::move(response));
-          return;
-        }
-        else if (
           auto jwt_ident = ctx.template try_get_caller<ccf::JwtAuthnIdentity>())
         {
           auto response = std::string("JWT");
@@ -956,6 +910,18 @@ namespace loggingapp
           response += fmt::format(
             "\nThe JWT payload is:\n{}", jwt_ident->payload.dump(2));
 
+          ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
+          ctx.rpc_ctx->set_response_body(std::move(response));
+          return;
+        }
+        else if (
+          auto cose_ident =
+            ctx.template try_get_caller<ccf::UserCOSESign1AuthnIdentity>())
+        {
+          auto response = std::string("User COSE Sign1");
+          response += fmt::format(
+            "\nThe caller is identified by a COSE Sign1 signed by kid: {}",
+            cose_ident->user_id);
           ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
           ctx.rpc_ctx->set_response_body(std::move(response));
           return;
@@ -979,13 +945,12 @@ namespace loggingapp
       };
       make_endpoint(
         "/multi_auth",
-        HTTP_GET,
+        HTTP_POST,
         multi_auth,
         {ccf::user_cert_auth_policy,
-         ccf::user_signature_auth_policy,
          ccf::member_cert_auth_policy,
-         ccf::member_signature_auth_policy,
          ccf::jwt_auth_policy,
+         ccf::user_cose_sign1_auth_policy,
          ccf::empty_auth_policy})
         .set_auto_schema<void, std::string>()
         .install();
@@ -1736,22 +1701,6 @@ namespace loggingapp
         HTTP_GET,
         get_request_query,
         ccf::no_auth_required)
-        .set_auto_schema<void, std::string>()
-        .install();
-
-      auto get_signed_request_query = [this](auto& ctx) {
-        ctx.rpc_ctx->set_response_status(HTTP_STATUS_OK);
-        std::vector<uint8_t> rq(
-          ctx.rpc_ctx->get_request_query().begin(),
-          ctx.rpc_ctx->get_request_query().end());
-        ctx.rpc_ctx->set_response_body(rq);
-      };
-
-      make_endpoint(
-        "/log/signed_request_query",
-        HTTP_GET,
-        get_signed_request_query,
-        {ccf::user_signature_auth_policy})
         .set_auto_schema<void, std::string>()
         .install();
 

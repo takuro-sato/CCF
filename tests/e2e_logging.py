@@ -583,12 +583,12 @@ def test_multi_auth(network, args):
 
         LOG.info("Anonymous, no auth")
         with primary.client() as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as a user, via TLS cert")
         with primary.client(user.local_id) as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as same user, now with user data")
@@ -596,17 +596,17 @@ def test_multi_auth(network, args):
             primary, user.service_id, {"some": ["interesting", "data", 42]}
         )
         with primary.client(user.local_id) as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as a different user, via TLS cert")
         with primary.client("user1") as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as a member, via TLS cert")
         with primary.client(member.local_id) as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as same member, now with user data")
@@ -614,34 +614,12 @@ def test_multi_auth(network, args):
             primary, member.service_id, {"distinct": {"arbitrary": ["data"]}}
         )
         with primary.client(member.local_id) as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate as a different member, via TLS cert")
         with primary.client("member1") as c:
-            r = c.get("/app/multi_auth")
-            require_new_response(r)
-
-        LOG.info("Authenticate as a user, via HTTP signature")
-        with primary.client(None, user.local_id) as c:
-            r = c.get("/app/multi_auth")
-            require_new_response(r)
-
-        LOG.info("Authenticate as a member, via HTTP signature")
-        with primary.client(None, member.local_id) as c:
-            r = c.get("/app/multi_auth")
-            require_new_response(r)
-
-        LOG.info("Authenticate as user2 but sign as user1")
-        with primary.client("user2", "user1") as c:
-            r = c.get("/app/multi_auth")
-            require_new_response(r)
-
-        network.create_user("user5", args.participants_curve, record=False)
-
-        LOG.info("Authenticate as invalid user5 but sign as valid user3")
-        with primary.client("user5", "user3") as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
         LOG.info("Authenticate via JWT token")
@@ -650,14 +628,19 @@ def test_multi_auth(network, args):
         jwt = jwt_issuer.issue_jwt(claims={"user": "Alice"})
 
         with primary.client() as c:
-            r = c.get("/app/multi_auth", headers={"authorization": "Bearer " + jwt})
+            r = c.post("/app/multi_auth", headers={"authorization": "Bearer " + jwt})
             require_new_response(r)
 
         LOG.info("Authenticate via second JWT token")
         jwt2 = jwt_issuer.issue_jwt(claims={"user": "Bob"})
 
         with primary.client(common_headers={"authorization": "Bearer " + jwt2}) as c:
-            r = c.get("/app/multi_auth")
+            r = c.post("/app/multi_auth")
+            require_new_response(r)
+
+        LOG.info("Authenticate via COSE Sign1 payload")
+        with primary.client(None, None, "user1") as c:
+            r = c.post("/app/multi_auth")
             require_new_response(r)
 
     return network
@@ -1268,17 +1251,6 @@ def test_long_lived_forwarding(network, args):
     return network
 
 
-@reqs.description("Testing signed queries with escaped queries")
-@reqs.installed_package("samples/apps/logging/liblogging")
-@reqs.at_least_n_nodes(2)
-@reqs.no_http2()
-def test_signed_escapes(network, args):
-    node = network.find_node_by_role()
-    with node.client("user0", "user0") as c:
-        escaped_query_tests(c, "signed_request_query")
-    return network
-
-
 @reqs.description("Test user-data used for access permissions")
 @reqs.supports_methods("/app/log/private/admin_only")
 def test_user_data_ACL(network, args):
@@ -1817,7 +1789,6 @@ def run(args):
         test_forwarding_frontends(network, args)
         test_forwarding_frontends_without_app_prefix(network, args)
         test_long_lived_forwarding(network, args)
-        test_signed_escapes(network, args)
         test_user_data_ACL(network, args)
         test_cert_prefix(network, args)
         test_anonymous_caller(network, args)

@@ -232,6 +232,7 @@ namespace ccf::js
   {
     std::chrono::microseconds start_time;
     std::chrono::milliseconds max_execution_time;
+    ccf::js::TxAccess access;
     bool request_timed_out = false;
   };
 
@@ -242,6 +243,9 @@ namespace ccf::js
     std::chrono::milliseconds max_exec_time = default_max_execution_time;
 
   public:
+    bool log_exception_details = false;
+    bool return_exception_details = false;
+
     Runtime(kv::Tx* tx);
     ~Runtime();
 

@@ -16,7 +16,7 @@ MCIsInConfigurations(i, newConfiguration) ==
 \* evaluate all relevant states. If set to only 2, the candidate_quorum
 \* constraint below is too restrictive.
 MCInTermLimit(i) ==
-    currentTerm[i] < 3
+    currentTerm[i] < 2
 
 \* Limit number of requests (new entries) that can be made
 MCInRequestLimit ==
@@ -27,10 +27,19 @@ MCInRequestVoteLimit(i,j) ==
     votesRequested[i][j] < 1
 
 \* Limit number of duplicate messages sent to the same server
-MCInMessagesLimit(i, j, index) ==
-    IF Len(messagesSent[i][j]) >= index
-    THEN messagesSent[i][j][index] < 1
-    ELSE TRUE
+MCInMessagesLimit(i, j, index, msg) ==
+    \* One AppendEntriesRequest per node-pair at a time:
+    \* a) No AppendEntries request from i to j.
+    /\ ~ \E n \in Messages:
+        /\ n.dest = msg.dest
+        /\ n.source = msg.source
+        /\ n.term = msg.term
+    \* b) No (corresponding) AppendEntries response from j to i.
+    /\ ~ \E n \in Messages:
+        /\ n.dest = msg.source
+        /\ n.source = msg.dest
+        /\ n.term = msg.term
+        /\ n.type = AppendEntriesResponse
 
 \* Limit number of times a RetiredLeader server sends commit notifications
 MCInCommitNotificationLimit(i) ==

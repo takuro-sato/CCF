@@ -18,13 +18,16 @@ endif()
 
 message(STATUS "Debian package version: ${CPACK_DEBIAN_PACKAGE_VERSION}")
 
-set(CCF_DEB_BASE_DEPENDENCIES "libuv1 (>= 1.34.2);openssl (>=1.1.1)")
+# Note: On Ubuntu, the most up-to-date version of the OpenSSL deb package is
+# 1.1.1f, which corresponds to the OpenSSL 1.1.1t release (latest security
+# patches).
+set(CCF_DEB_BASE_DEPENDENCIES "libuv1 (>= 1.34.2);openssl (>=1.1.1f)")
 set(CCF_DEB_DEPENDENCIES ${CCF_DEB_BASE_DEPENDENCIES})
 
-set(OE_VERSION "0.18.5")
+set(OE_VERSION "0.19.0")
 if(COMPILE_TARGET STREQUAL "sgx")
   list(APPEND CCF_DEB_DEPENDENCIES
-       "libc++1-10;libc++abi1-10;open-enclave (>=${OE_VERSION})"
+       "libc++1-11;libc++abi1-11;open-enclave (>=${OE_VERSION})"
   )
 else()
   list(

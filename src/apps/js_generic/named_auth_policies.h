@@ -19,19 +19,17 @@ namespace ccfapp
       policies.emplace(
         ccf::UserCertAuthnPolicy::SECURITY_SCHEME_NAME,
         ccf::user_cert_auth_policy);
-      policies.emplace(
-        ccf::UserSignatureAuthnPolicy::SECURITY_SCHEME_NAME,
-        ccf::user_signature_auth_policy);
 
       policies.emplace(
         ccf::MemberCertAuthnPolicy::SECURITY_SCHEME_NAME,
         ccf::member_cert_auth_policy);
-      policies.emplace(
-        ccf::MemberSignatureAuthnPolicy::SECURITY_SCHEME_NAME,
-        ccf::member_signature_auth_policy);
 
       policies.emplace(
         ccf::JwtAuthnPolicy::SECURITY_SCHEME_NAME, ccf::jwt_auth_policy);
+
+      policies.emplace(
+        ccf::UserCOSESign1AuthnPolicy::SECURITY_SCHEME_NAME,
+        ccf::user_cose_sign1_auth_policy);
 
       policies.emplace(
         ccf::EmptyAuthnPolicy::SECURITY_SCHEME_NAME, ccf::empty_auth_policy);
@@ -60,21 +58,17 @@ namespace ccfapp
     {
       return ccf::UserCertAuthnPolicy::SECURITY_SCHEME_NAME;
     }
-    else if constexpr (std::is_same_v<T, ccf::UserSignatureAuthnIdentity>)
-    {
-      return ccf::UserSignatureAuthnPolicy::SECURITY_SCHEME_NAME;
-    }
     else if constexpr (std::is_same_v<T, ccf::MemberCertAuthnIdentity>)
     {
       return ccf::MemberCertAuthnPolicy::SECURITY_SCHEME_NAME;
     }
-    else if constexpr (std::is_same_v<T, ccf::MemberSignatureAuthnIdentity>)
-    {
-      return ccf::MemberSignatureAuthnPolicy::SECURITY_SCHEME_NAME;
-    }
     else if constexpr (std::is_same_v<T, ccf::JwtAuthnIdentity>)
     {
       return ccf::JwtAuthnPolicy::SECURITY_SCHEME_NAME;
+    }
+    else if constexpr (std::is_same_v<T, ccf::UserCOSESign1AuthnIdentity>)
+    {
+      return ccf::UserCOSESign1AuthnPolicy::SECURITY_SCHEME_NAME;
     }
     else if constexpr (std::is_same_v<T, ccf::EmptyAuthnIdentity>)
     {
